@@ -1,0 +1,6 @@
+
+### 商家信息列表URL
+http://restapi.ele.me/v1/restaurants?type=geohash&geohash=wtsqqnp9ecs7&limit=100&offset=0
+
+### 依赖的包列表
+1. spiderflow
