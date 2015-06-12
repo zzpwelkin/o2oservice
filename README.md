@@ -1,4 +1,12 @@
-### 
+# o2o语义服务实现
+
+## 系统概要描述
+主要的工作重点:
+    1. 数据转换和存储
+    2. 语义分析及推理
+    3. 第三方下订单或支付接口使用
+
+### 数据获取、转换及存储
 
 经过前期的分析后，决定还是直接用RDF方式保存商品信息并通过语义网络的知识架构管理和查询比较合理。
 这样决定的主要原因是考虑到所属不同类别的商品本身存在属性上的差异(如菜和饮料包含的信息内容不同，
@@ -7,7 +15,7 @@
 要实现的系统中，每一个类商品都有两大类属性，一是每类商品特有的属性，一类是与服务质量相关的属性。
 与服务质量相关的属性相对比较统一。
 
-### 相关商品本体(ontology)定义参考
+#### 相关商品本体(ontology)定义参考
 
 * 基本本体定义列表
     [rdfs](http://www.w3.org/2000/01/rdf-schema#) A vocabulary for structuring RDF resources.
@@ -29,7 +37,7 @@
     [food-ontology](http://www.dataversity.net/tag/food-ontology/)
     [Food Ontology simple](http://fruct.org/publications/abstract13/files/Kol.pdf)
 
-#### Exampled 
+##### Exampled 
 **食品类RDF定义例子**
 
 1. Trutle
@@ -115,9 +123,9 @@ foo:jyjr a gr:BusinessEntity
 </html>
 ```
 
-####  服务质量属性本体定义参考
+#####  服务质量属性本体定义参考
 
-### ETL过程描述
+#### ETL过程描述
 
 1. 信息获取(E)
 通过爬虫从各类相关网站上爬取下来商家和商品的信息并暂村到mongodb数据库中。
@@ -129,7 +137,7 @@ foo:jyjr a gr:BusinessEntity
 2. 信息处理并入库(TL)
 处理保存在monbodb中的商家和商品信息转换成对应本体的RDF格式并保存到RDF数据库(e.g.Callimachus)中(或者也可以保存到本地的文本文件中).
 
-### 原始数据向rdf数据转换策略
+#### 原始数据向rdf数据转换策略
 
 1. rule方式
     * 流程: doc -> <<rule>> -> ttl.
@@ -146,6 +154,84 @@ foo:jyjr a gr:BusinessEntity
 
 #### HTML方式数据转换说明
 
+### 语义数据分析和应用
+
+#### 请求文本分析
+
+自然语言方式服务的请求中一般包括三类语义信息:
+    1. 具体购买的商品或服务(如: 来2份盖浇饭和一瓶可乐)
+    2. 对商品或服务的额外要求(如: 盖浇饭放点辣椒)
+    3. 服务质量要求(如: 要求12点以前送到)
+
+也即用户自然分析后的基本结构形式为: 
+
+```
+requests := products [services_QA]
+
+products := (prodmain [prodextra]|products)
+prodmain := name [category] number [dealer]
+prodetra := list<text>
+
+services_QA := [time_cond|price_cond|service_QA]
+time_cond := 送货上门时间
+price_cond := 商品价格
+```
+
+对应一个简单json实例:
+```
+{
+    products:{
+        '盖浇饭':
+            {
+                'number': 2
+                'extra': ['多放点辣椒','多加点米']
+            },
+        '可乐':
+            {
+                'number': 1,
+                'extra': ['冰的'],
+                'unit': '听'
+            }
+    },
+    serviceQA:{
+        'time_cond':"12:00:00"
+    }
+}
+```
+
+*Note:* w3c语音小组已定义了一些列标准方便web上语音的使用。其中[SISR(Sematic interpretion for speech recognition)标准](http://www.w3.org/TR/semantic-interpretation/)定义了解析规则，并参考其[例子](http://www.w3.org/TR/semantic-interpretation/#SI8)已大有可用之出。
+
+#### 文本分析结果处理
+有用户请求后的文本分析结果后，既可以从数据库中查询商品/服务和其他信息。从生活和查询结果来看，用户的请求有准确请求(quality data)和模糊请求(confuse data)两类。准确请求即用户详细的指定了购买的商品(如西红柿鸡蛋盖浇饭， 一听可乐)，模糊的请求即用户只指定了某一类商品/服务(如盖浇饭).
+如果数据库中组织和录入细度合理，对于quality data, 算法可以准确的确定用户想购买的商品/服务。
+基于简单原则，当前确定如下基于data的查询原则.
+
+**查询的基本原则:**
+    1. quality data请求的商品/服务尽可能由一个商家提供;
+    2. confuse data请求则返回包括的具体的商品/服务.
+
+graph图数据库sparql查询示例:
+```
+1. 查询同时提供鸡蛋炒饭和可乐的商家
+
+prefix gr:<http://purl.org/goodrelations/v1#>
+select distinck ?s
+where
+{
+{
+select ?s ?dlname where {?s a gr:BusinessEntity;gr:name ?dlname; gr:offers[gr:includes ?dsh]. ?dsh gr:name ?dshname. 
+FILTER  regex(?dshname, "鸡蛋炒饭") .}
+}
+{
+select ?s ?dlname where {?s a gr:BusinessEntity;gr:name ?dlname; gr:offers[gr:includes ?dsh]. ?dsh gr:name ?dshname.
+FILTER  regex(?dshname, "可乐") .}
+}
+}
+
+2. confuse data 查询具体的商品(如confuse data中只有 "盖浇饭" 关键字)
+select distinct ?dsh ?dshname where { ?dsh gr:name ?dshname. FILTER  regex(?dshname, "盖浇饭") .}
+
+```
 
 ### APPENDIX
 
