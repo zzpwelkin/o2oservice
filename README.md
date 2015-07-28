@@ -175,7 +175,7 @@ foo:jyjr a gr:BusinessEntity
 2. pythonic方式
     * 流程: owl shcema -> [[pythonic]] -> 编程转换
     * 对所有OWL模式产生对应的python类或数据类型。这样用python方式处理起来很灵活，但需要实现可用的shcema到pythoc语言的转换框架。
-    * 调研后发现一下两个工具可以使用: [OntoSPy](https://github.com/lambdamusic/OntoSPy), [generageDS](http://pythonhosted.org/generateDS/) .
+    * 调研后发现一下一些工具可以使用: [OntoSPy](https://github.com/lambdamusic/OntoSPy), [generageDS](http://pythonhosted.org/generateDS/, [Ontopy](https://github.com/afternoon/ontopy) ) .
 
 3. html方式
     * 流程: raw data -> simple html -> [[xslt]] -> [rdfa](http://www.w3.org/TR/rdfa-primer/#bib-rdfa-core)(rdf/xml) -> turtle
@@ -234,20 +234,26 @@ price_cond := 商品价格
 *Note:* w3c语音小组已定义了一些列标准方便web上语音的使用。其中[SISR(Sematic interpretion for speech recognition)标准](http://www.w3.org/TR/semantic-interpretation/)定义了解析规则，并参考其[例子](http://www.w3.org/TR/semantic-interpretation/#SI8)已大有可用之出。
 
 #### 文本分析结果处理
-有用户请求后的文本分析结果后，既可以从数据库中查询商品/服务和其他信息。从生活和查询结果来看，用户的请求有准确请求(quality data)和模糊请求(confuse data)两类。准确请求即用户详细的指定了购买的商品(如西红柿鸡蛋盖浇饭， 一听可乐)，模糊的请求即用户只指定了某一类商品/服务(如盖浇饭). 
 
-Qualilty data: 在数据库中有对应的准确数据;
-Confuse data: 在数据库中无准确数据,且模糊查询后有多个符合项.
+** 概念定义 **
 
-如果数据库中组织和录入细度合理，对于quality data, 算法可以准确的确定用户想购买的商品/服务。 
+1. 所有的商家集合定义为: D = {d1, d2, dn}
 
-基于简单原则，当前确定如下基于data的查询原则.
+2. 所哟商品和服务集合定义为: P = {p1, p2, pn}
 
-**查询的基本原则:**
+3. 某一商家di所提供的商品和服务集合定义为: di = {pi1, pi2, pin}
 
-    1. quality data请求的商品/服务尽可能由一个商家提供;
+有用户请求后的文本分析结果后，既可以从数据库中查询商品/服务和其他信息。从生活和查询结果来看，用户的请求有准确请求(quality data)和模糊请求(confuse data)两类。
 
-    2. confuse data请求则返回包括的具体的商品/服务.
+Quality data 既是对于查询数据中所有的商品在P集合中都有对应的元素.
+
+Confuse data 既是对于查询数据中部分或全部条件在P集合中有对应多于一个的元素.
+
+那么，*查询的目的就是按照一定的规则从集合P中找出符合查询条件的子集合*.而查询规则可以有多种，如根据商家信誉排名等。
+
+**查询规则:**
+
+    1.查询结果子集合中各个元素所属商家组成的集合元素最少; 
 
 graph图数据库sparql查询示例:
 ```
